@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import sys, os
-sys.path.append(os.path.join(sys.path[0],'src'))
+sys.path.append(os.path.join(sys.path[0], 'src'))
 
 from instabot import InstaBot
 from check_status import check_status
@@ -11,7 +11,7 @@ from follow_protocol import follow_protocol
 import time
 
 
-bot = InstaBot(login="username", password="password",
+bot = InstaBot(login="davydovdmitrii7865", password="4815162342",
                like_per_day=1000,
                comments_per_day=0,
                tag_list=['follow4follow', 'f4f', 'cute'],
@@ -72,23 +72,23 @@ while True:
                 time.sleep(10*60)
                 check_status(bot)
 
-    elif mode == 2 :
+    elif mode == 2:
         bot.bot_mode = 1
         bot.new_auto_mod()
 
-    elif mode == 3 :
+    elif mode == 3:
         unfollow_protocol(bot)
         time.sleep(10*60)
 
-    elif mode == 4 :
+    elif mode == 4:
         feed_scanner(bot)
         time.sleep(60)
         follow_protocol(bot)
         time.sleep(10*60)
 
-    elif mode == 5 :
+    elif mode == 5:
         bot.bot_mode=2
         unfollow_protocol(bot)
 
     else :
-        print ("Wrong mode!")
+        print("Wrong mode!")

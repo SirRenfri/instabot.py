@@ -13,6 +13,7 @@ import signal
 import itertools
 
 from unfollow_protocol import unfollow_protocol
+from models import Model
 
 class InstaBot:
     """
@@ -46,6 +47,7 @@ class InstaBot:
     url_logout = 'https://www.instagram.com/accounts/logout/'
     url_media_detail = 'https://www.instagram.com/p/%s/?__a=1'
     url_user_detail = 'https://www.instagram.com/%s/?__a=1'
+    url_post = 'https://www.instagram.com/p/%s/?__a=1'
 
     user_agent = ("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 "
                   "(KHTML, like Gecko) Chrome/48.0.2564.103 Safari/537.36")
@@ -95,6 +97,8 @@ class InstaBot:
     # Other.
     user_id = 0
     media_by_tag = 0
+    posts_info_by_tag = 0
+    username_by_code = 0
     media_on_feed = []
     media_by_user = []
     login_status = False
@@ -174,6 +178,8 @@ class InstaBot:
         self.user_password = password
         self.bot_mode = 0
         self.media_by_tag = []
+        self.posts_info_by_tag = []
+        self.username_by_code = ''
         self.media_on_feed = []
         self.media_by_user = []
         self.unwanted_username_list = unwanted_username_list
@@ -786,3 +792,63 @@ class InstaBot:
                 self.logger.info(log_text)
             except UnicodeEncodeError:
                 print("Your text has unicode problem!")
+
+    def get_posts_info_by_tag(self, tag):
+        if (self.login_status):
+            log_string = "Get media id by tag: %s" % (tag)
+            self.write_log(log_string)
+            if self.login_status == 1:
+                url_tag = '%s%s%s' % (self.url_tag, tag, '/?__a=1')
+                try:
+                    r = self.s.get(url_tag)
+                    text = r.text
+                    all_data = json.loads(text)
+                    posts = all_data['tag']['media']['nodes']
+
+                    codes_and_id = []
+                    db = Model()
+                    for post in posts:
+                        code = post['code']
+                        id = post['owner']['id']
+
+                        if db.check_user(id) == False:
+                            codes_and_id.append({'user_id': id, 'code': code})
+                    db.close()
+
+
+                    # TODO: Дописать проверку на наличие в базе id
+                    #post = posts[0]
+                    #code = post['code']
+                    #id = post['owner']['id']
+
+                    self.posts_info_by_tag = codes_and_id
+
+                except:
+                    self.code_by_tag = []
+                    self.write_log("Except on get code!")
+            else:
+                return 0
+
+    def get_username_by_code(self, code):
+        log_string = "Get username by post code: %s" % (code)
+        self.write_log(log_string)
+        if self.login_status == 1:
+            url_code = self.url_post % code
+            try:
+                r = self.s.get(url_code)
+                text = r.text
+                all_data = json.loads(text)
+                username = all_data['media']['owner']['username']
+
+                self.username_by_code += username
+
+            except:
+                self.username_by_code = ''
+                self.write_log("Except on get username!")
+        else:
+            return 0
+
+    def auto_mod6(self, tag):
+        self.get_posts_info_by_tag(tag)
+        posts_info = self.posts_info_by_tag
+        print(posts_info)
