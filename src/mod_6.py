@@ -4,44 +4,104 @@ import sys, os
 sys.path.append(os.path.join(sys.path[0], 'src'))
 
 from instabot import InstaBot
-from userinfo import UserInfo
+import json
 from models import Model
 
+class Mod6(InstaBot):
+    '''
+        Описание класса
+    '''
 
+    url_tag = 'https://www.instagram.com/explore/tags/'
+    url_post = 'https://www.instagram.com/p/%s/?__a=1'
 
-db = Model()
+    def __init__(self, login, password,
+                 like_per_day=1000,
+                 media_max_like=50,
+                 media_min_like=0,
+                 follow_per_day=0,
+                 follow_time=5 * 60 * 60,
+                 unfollow_per_day=0,
+                 comments_per_day=0,
+                 tag_list=['cat', 'car', 'dog'],
+                 max_like_for_one_tag=5,
+                 unfollow_break_min=15,
+                 unfollow_break_max=30,
+                 log_mod=0,
+                 proxy="",
+                 user_blacklist={},
+                 tag_blacklist=[],
+                 unwanted_username_list=[]):
+        InstaBot.__init__(self, login, password,
+                 like_per_day,
+                 media_max_like,
+                 media_min_like,
+                 follow_per_day,
+                 follow_time,
+                 unfollow_per_day,
+                 comments_per_day,
+                 tag_list,
+                 max_like_for_one_tag,
+                 unfollow_break_min,
+                 unfollow_break_max,
+                 log_mod,
+                 proxy,
+                 user_blacklist,
+                 tag_blacklist,
+                 unwanted_username_list)
+        self.posts_info_by_tag = []
+        self.username_by_code = ''
 
-bot = InstaBot(login="davydovdmitrii7865", password="4815162342",
-               like_per_day=1000,
-               comments_per_day=0,
-               tag_list=['follow4follow', 'f4f', 'cute'],
-               tag_blacklist=['rain', 'thunderstorm'],
-               user_blacklist={},
-               max_like_for_one_tag=50,
-               follow_per_day=300,
-               follow_time=1*60,
-               unfollow_per_day=300,
-               unfollow_break_min=15,
-               unfollow_break_max=30,
-               log_mod=0,
-               proxy='',
-               # Use unwanted username list to block users which have username contains one of this string
-               ## Doesn't have to match entirely example: mozart will be blocked because it contains *art
-               ### freefollowers will be blocked because it contains free
-               unwanted_username_list=['second','stuff','art','project','love','life','food','blog','free','keren','photo','graphy','indo',
-                                       'travel','art','shop','store','sex','toko','jual','online','murah','jam','kaos','case','baju','fashion',
-                                        'corp','tas','butik','grosir','karpet','sosis','salon','skin','care','cloth','tech','rental',
-                                        'kamera','beauty','express','kredit','collection','impor','preloved','follow','follower','gain',
-                                        '.id','_id','bags'])
+    def get_posts_info_by_tag(self, tag):
+        if (self.login_status):
+            log_string = "Get media id by tag: %s" % (tag)
+            self.write_log(log_string)
+            if self.login_status == 1:
+                url_tag = '%s%s%s' % (self.url_tag, tag, '/?__a=1')
+                try:
+                    r = self.s.get(url_tag)
+                    text = r.text
+                    all_data = json.loads(text)
+                    posts = all_data['tag']['media']['nodes']
 
-while True:
-    bot.auto_mod6('dog')
+                    codes_and_id = []
+                    db = Model()
+                    for post in posts:
+                        code = post['code']
+                        id = post['owner']['id']
 
-    #bot.get_username_by_code(code)
-    #username = bot.username_by_code
-    #print(username)
+                        if db.check_user(id) == False:
+                            codes_and_id.append({'user_id': id, 'code': code})
+                    db.close()
 
-    #db.save_user(username, '74654', 'dog')
+                    self.posts_info_by_tag = codes_and_id
 
-    #db.check_user('74654')
+                except:
+                    self.code_by_tag = []
+                    self.write_log("Except on get code!")
+            else:
+                return 0
 
+    def get_username_by_code(self, code):
+        log_string = "Get username by post code: %s" % (code)
+        self.write_log(log_string)
+        if self.login_status == 1:
+            url_code = self.url_post % code
+            try:
+                r = self.s.get(url_code)
+                text = r.text
+                all_data = json.loads(text)
+                username = all_data['media']['owner']['username']
+
+                self.username_by_code += username
+
+            except:
+                self.username_by_code = ''
+                self.write_log("Except on get username!")
+        else:
+            return 0
+
+    def auto_mod6(self, tag):
+        self.get_posts_info_by_tag(tag)
+        posts_info = self.posts_info_by_tag
+        print(posts_info)
