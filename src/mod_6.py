@@ -14,6 +14,7 @@ class Mod6(InstaBot):
 
     url_tag = 'https://www.instagram.com/explore/tags/'
     url_post = 'https://www.instagram.com/p/%s/?__a=1'
+    url_user_media = 'https://www.instagram.com/%s/media/'
 
     def __init__(self, login, password,
                  like_per_day=1000,
@@ -49,10 +50,11 @@ class Mod6(InstaBot):
                  user_blacklist,
                  tag_blacklist,
                  unwanted_username_list)
-        self.posts_info_by_tag = []
+        self.users_info_by_tag = []
         self.username_by_code = ''
+        self.usernames = []
 
-    def get_posts_info_by_tag(self, tag):
+    def get_users_by_tag(self, tag):
         if (self.login_status):
             log_string = "Get media id by tag: %s" % (tag)
             self.write_log(log_string)
@@ -64,27 +66,32 @@ class Mod6(InstaBot):
                     all_data = json.loads(text)
                     posts = all_data['tag']['media']['nodes']
 
-                    codes_and_id = []
+                    users_info = []
                     db = Model()
                     for post in posts:
                         code = post['code']
+                        self.get_username_by_code(code)
                         id = post['owner']['id']
 
                         if db.check_user(id) == False:
-                            codes_and_id.append({'user_id': id, 'code': code})
+                            users_info.append({'user_id': id, 'username': self.username_by_code})
+
+                            log_string = "Get new user: %s" % (self.username_by_code)
+                            self.write_log(log_string)
+                        else:
+                            log_string = "User already added in db: %s" % (self.username_by_code)
+                            self.write_log(log_string)
                     db.close()
 
-                    self.posts_info_by_tag = codes_and_id
+                    self.users_info_by_tag = users_info
 
                 except:
-                    self.code_by_tag = []
+                    self.users_info_by_tag = []
                     self.write_log("Except on get code!")
             else:
                 return 0
 
     def get_username_by_code(self, code):
-        log_string = "Get username by post code: %s" % (code)
-        self.write_log(log_string)
         if self.login_status == 1:
             url_code = self.url_post % code
             try:
@@ -93,7 +100,7 @@ class Mod6(InstaBot):
                 all_data = json.loads(text)
                 username = all_data['media']['owner']['username']
 
-                self.username_by_code += username
+                self.username_by_code = username
 
             except:
                 self.username_by_code = ''
@@ -101,7 +108,43 @@ class Mod6(InstaBot):
         else:
             return 0
 
-    def auto_mod6(self, tag):
-        self.get_posts_info_by_tag(tag)
-        posts_info = self.posts_info_by_tag
-        print(posts_info)
+    def check_posts_and_like(self, username, min_like=0):
+        url_user_media = self.url_user_media % username
+        try:
+            r = self.s.get(url_user_media)
+            text = r.text
+            all_data = json.loads(text)
+            posts_info = all_data['items']
+
+            for post_info in posts_info:
+                likes = post_info['likes']['count']
+                if likes >= min_like:
+                    InstaBot.like(self, post_info['id'])
+                    log_string = "Like post: %s" % (post_info['id'])
+                    self.write_log(log_string)
+                else:
+                    log_string = "Post %s have too litle like" % (post_info['id'])
+                    self.write_log(log_string)
+
+        except:
+            self.write_log("This user is disappear!")
+
+        else:
+            return 0
+
+    def auto_mod6(self, tag, min_like=0):
+        self.get_users_by_tag(tag)
+        users_info = self.users_info_by_tag
+
+        db = Model()
+        for user_info in users_info:
+            user_id = user_info['user_id']
+            username = user_info['username']
+
+            self.check_posts_and_like(username, min_like)
+            InstaBot.follow(self, user_id)
+            db.save_user('user', '74654', 'dog')
+        db.clode()
+
+
+
