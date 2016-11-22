@@ -132,19 +132,37 @@ class Mod6(InstaBot):
         else:
             return 0
 
-    def auto_mod6(self, tag, min_like=0):
+    def сollect_users_by_tag(self, tag):
         self.get_users_by_tag(tag)
         users_info = self.users_info_by_tag
 
         db = Model()
+        operation = 'COLLECT'
         for user_info in users_info:
             user_id = user_info['user_id']
             username = user_info['username']
 
-            self.check_posts_and_like(username, min_like)
+            db.save_user(username, user_id, tag, operation)
+
+            log_string = "User %s is added in db" % (username)
+            self.write_log(log_string)
+        db.close()
+
+    def like_and_follow_user_from_db(self, min_like=0):
+        db = Model()
+        users_info = db.get_users_with_operation('COLLECT')
+
+        for user_info in users_info:
+            user_id = user_info['user_id']
+            username = user_info['username']
+
+            self.check_posts_and_like(username, min_like) # TODO: Тайм-паузы между лайками
             InstaBot.follow(self, user_id)
-            db.save_user('user', '74654', 'dog')
-        db.clode()
+
+            db.change_operation_status(user_id, 'LIKED_AND_FOLLOWED')
+            db.change_date(user_id)
+        db.close()
+
 
 
 

@@ -29,7 +29,19 @@ bot = Mod6(login="davydovdmitrii7865", password="4815162342",
                                         'kamera','beauty','express','kredit','collection','impor','preloved','follow','follower','gain',
                                         '.id','_id','bags'])
 
+'''
+MOD 0 - collect user by teg in db
+MOD 1 - like users from db
+'''
+mod = 1
 
-while True:
-    bot.auto_mod6('dog')
+
+if mod == 0:
+    while True:
+        bot.сollect_users_by_tag('dog')
+elif mod == 1:
+    bot.like_and_follow_user_from_db()
+else:
+    print("Wrong mode!")
+
 
