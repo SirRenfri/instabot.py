@@ -35,10 +35,9 @@ MOD 1 - like users from db
 '''
 mod = 1
 
-
+#while True:
 if mod == 0:
-    while True:
-        bot.сollect_users_by_tag('dog')
+    bot.сollect_users_by_tags()
 elif mod == 1:
     bot.like_and_follow_user_from_db()
 else:

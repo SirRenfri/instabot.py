@@ -5,6 +5,8 @@ sys.path.append(os.path.join(sys.path[0], 'src'))
 
 from instabot import InstaBot
 import json
+import time
+import random
 from models import Model
 
 class Mod6(InstaBot):
@@ -53,6 +55,7 @@ class Mod6(InstaBot):
         self.users_info_by_tag = []
         self.username_by_code = ''
         self.usernames = []
+        self.like_per_day = like_per_day
 
     def get_users_by_tag(self, tag):
         if (self.login_status):
@@ -122,6 +125,17 @@ class Mod6(InstaBot):
                     InstaBot.like(self, post_info['id'])
                     log_string = "Like post: %s" % (post_info['id'])
                     self.write_log(log_string)
+
+                    self.like_per_day = self.like_per_day - 1
+
+                    if self.like_per_day == 0:
+                        self.write_log("Вы достигли лимита по лайкам на сегодня")
+                        return True
+                    else:
+                        log_string = "Осталось лайков: %s" % (self.like_per_day)
+                        self.write_log(log_string)
+
+                    time.sleep(random.randint(1, 5))
                 else:
                     log_string = "Post %s have too litle like" % (post_info['id'])
                     self.write_log(log_string)
@@ -132,36 +146,53 @@ class Mod6(InstaBot):
         else:
             return 0
 
-    def сollect_users_by_tag(self, tag):
-        self.get_users_by_tag(tag)
-        users_info = self.users_info_by_tag
+    def сollect_users_by_tags(self):
+        if (self.login_status):
+            random.shuffle(self.tag_list)
+            tag = random.choice(self.tag_list)
 
-        db = Model()
-        operation = 'COLLECT'
-        for user_info in users_info:
-            user_id = user_info['user_id']
-            username = user_info['username']
+            self.get_users_by_tag(tag)
+            users_info = self.users_info_by_tag
 
-            db.save_user(username, user_id, tag, operation)
+            db = Model()
+            operation = 'COLLECT'
+            for user_info in users_info:
+                user_id = user_info['user_id']
+                username = user_info['username']
 
-            log_string = "User %s is added in db" % (username)
-            self.write_log(log_string)
-        db.close()
+                db.save_user(username, user_id, tag, operation)
 
-    def like_and_follow_user_from_db(self, min_like=0):
-        db = Model()
-        users_info = db.get_users_with_operation('COLLECT')
+                log_string = "User %s is added in db" % (username)
+                self.write_log(log_string)
+            db.close()
 
-        for user_info in users_info:
-            user_id = user_info['user_id']
-            username = user_info['username']
+    def like_and_follow_user_from_db(self, min_like=0, follow_sleap=60):
+        if (self.login_status):
+            db = Model()
+            users_info = []
+            for tag in self.tag_list:
+                users_info += db.get_users_with_operation_and_tag('COLLECT', tag)
 
-            self.check_posts_and_like(username, min_like) # TODO: Тайм-паузы между лайками
-            InstaBot.follow(self, user_id)
+            if len(users_info) != 0:
+                time_now = time.time()
+                for user_info in users_info:
+                    user_id = user_info['user_id']
+                    username = user_info['username']
 
-            db.change_operation_status(user_id, 'LIKED_AND_FOLLOWED')
-            db.change_date(user_id)
-        db.close()
+                    if self.check_posts_and_like(username, min_like) != True:
+                        InstaBot.follow(self, user_id)
+                    else:
+                        return 0
+
+                    db.change_operation_status(user_id, 'LIKED_AND_FOLLOWED')
+                    db.change_date(user_id)
+
+                    if (time.time() - time_now) < follow_sleap:
+                        time.sleep(follow_sleap - (time.time() - time_now))
+                        time_now = time.time()
+                db.close()
+            else:
+                self.write_log("Entries with such tags aren't!")
 
 
 

@@ -21,9 +21,9 @@ class Model:
         else:
             return False
 
-    def get_users_with_operation(self, operation):
+    def get_users_with_operation_and_tag(self, operation, tag):
         cursor = self.cursor
-        cursor.execute("SELECT username, user_id FROM instagram_users WHERE operation = '%s'" % (operation))
+        cursor.execute("SELECT username, user_id FROM instagram_users WHERE operation = '%s' AND tag = '%s'" % (operation, tag))
 
         users_info = []
         user_info = cursor.fetchone()
