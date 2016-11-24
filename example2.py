@@ -31,14 +31,18 @@ bot = Mod6(login="davydovdmitrii7865", password="4815162342",
 
 '''
 MOD 0 - collect user by teg in db
-MOD 1 - like users from db
+MOD 1 - collect user from file in db
+MOD 2 - like users from db
 '''
 mod = 1
 
-#while True:
+
 if mod == 0:
-    bot.сollect_users_by_tags()
+    while True:
+        bot.сollect_users_by_tags()
 elif mod == 1:
+    bot.сollect_users_from_file()
+elif mod == 2:
     bot.like_and_follow_user_from_db()
 else:
     print("Wrong mode!")

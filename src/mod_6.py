@@ -4,6 +4,7 @@ import sys, os
 sys.path.append(os.path.join(sys.path[0], 'src'))
 
 from instabot import InstaBot
+from userinfo import UserInfo
 import json
 import time
 import random
@@ -193,6 +194,31 @@ class Mod6(InstaBot):
                 db.close()
             else:
                 self.write_log("Entries with such tags aren't!")
+
+    def сollect_users_from_file(self, file_name='file_users.csv'):
+
+        print('Подключаем файл', file_name)
+        f = open(file_name)
+        usernames = [username.strip() for username in f]
+        f.close()
+
+        print(usernames)
+
+        db = Model()
+        ui = UserInfo()
+        operation = 'COLLECT'
+        for username in usernames:
+            user_id = ui.get_user_id_by_login(username)
+
+            if db.check_user(user_id) == False:
+                db.save_user(username, user_id, 'users_from_files_579', operation)
+
+                log_string = "User %s is added in db" % (username)
+                self.write_log(log_string)
+            else:
+                log_string = "User %s already add in db" % (username)
+                self.write_log(log_string)
+        db.close()
 
 
 
